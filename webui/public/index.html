@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Doom on Lambda MicroVMs</title>
+  <title>Can it run Doom? Lambda MicroVMs</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <h1 class="caption">Can it run DOOM: Lambda MicroVMs</h1>
+  <h1 class="caption">Can it run Doom? Lambda MicroVMs</h1>
+  <p class="subcaption">The Doom engine (doomgeneric) playing Freedoom</p>
   <main class="layout">
     <section class="game">
       <div id="screen" tabindex="0">
@@ -16,10 +17,10 @@
         <div id="start">
           <div class="start-buttons" id="start-buttons">
             <button id="start-btn" class="start-choice" type="button">
-              <span class="line1">Let's play DOOM</span><span class="line2">(with full sound!)</span>
+              <span class="line1">Let's play</span><span class="line2">(with full sound!)</span>
             </button>
             <button id="start-muted-btn" class="start-choice quiet" type="button">
-              <span class="line1">Let's play DOOM</span><span class="line2">(with sounds off)</span>
+              <span class="line1">Let's play</span><span class="line2">(with sounds off)</span>
             </button>
           </div>
           <p id="start-msg"></p>
@@ -111,6 +112,12 @@
       </ul>
     </aside>
   </main>
+  <footer class="notice">
+    DOOM is a trademark of its owner. This demo is not affiliated with or endorsed by id Software, ZeniMax Media or
+    Microsoft. It runs <a href="https://github.com/ozkl/doomgeneric">doomgeneric</a> (GPL-2.0-or-later) with
+    <a href="https://freedoom.github.io/">Freedoom</a> game data (BSD-3-Clause), which contains no data from the original
+    game.
+  </footer>
   <script type="module" src="/app.js"></script>
 </body>
 </html>

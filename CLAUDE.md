@@ -4,7 +4,7 @@ Run Doom (the game) on AWS Lambda MicroVMs, played from a web browser.
 
 - **Browser ↔ webui:** POST + SSE.
 - **webui ↔ MicroVM:** one WebSocket per MicroVM per webui execution environment. It carries binary frames, audio events and input.
-- **Provisioning:** MicroVMs aren't created on demand. Each tab provisions its own ("Let's play DOOM" on the start screen → `RunMicrovm`), up to `MAX_MICROVMS` (10) live, else 503 "please try later". The webui mints an endpoint auth token per MicroVM (`CreateMicrovmAuthToken`, header `X-aws-proxy-auth`, port via `X-aws-proxy-port: 8081`).
+- **Provisioning:** MicroVMs aren't created on demand. Each tab provisions its own ("Let's play" on the start screen → `RunMicrovm`), up to `MAX_MICROVMS` (10) live, else 503 "please try later". The webui mints an endpoint auth token per MicroVM (`CreateMicrovmAuthToken`, header `X-aws-proxy-auth`, port via `X-aws-proxy-port: 8081`).
 - **Sessions:** the MicroVM id is the tab's session id (`X-Doom-Session` header, or `?microvm=` for `sendBeacon`), kept in the tab's memory only. Any webui execution environment serves any tab via `GetMicrovm`; per-MicroVM state lives in a `sessions` map. `pagehide` sends `/api/terminate` (`TerminateMicrovm`). Locally the id is `local` and all tabs share the one container.
 - **Lifecycle:** 5 min max lifetime, suspend after 2 min idle, terminate after 2 min suspended.
 

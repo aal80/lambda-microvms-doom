@@ -1,4 +1,4 @@
-# Can it run DOOM: AWS Lambda MicroVMs
+# Can it run Doom? AWS Lambda MicroVMs
 
 This is an experiment of running Doom on [AWS Lambda MicroVMs](https://docs.aws.amazon.com/lambda/latest/dg/microvms-launching.html), played in a web browser.
 
@@ -10,7 +10,7 @@ The game engine runs in a Lambda MicroVM. The browser draws the frames it receiv
 
 ## How it works
 
-- **Browser** (`webui/public`): a start screen (**Let's play DOOM** with full sound, or with sounds off), which provisions the tab's own MicroVM; then the game on a canvas, sound effects and music with Web Audio (a sound on/off control in the top right corner), and key presses. A live diagram next to the game shows the traffic.
+- **Browser** (`webui/public`): a start screen (**Let's play** with full sound, or with sounds off), which provisions the tab's own MicroVM; then the game on a canvas, sound effects and music with Web Audio (a sound on/off control in the top right corner), and key presses. A live diagram next to the game shows the traffic.
 - **webui** (`webui/server.js`): runs on AWS Lambda Web Functions.
   - It starts a MicroVM for each tab (`RunMicrovm`), waits for it to run, and mints an endpoint auth token (`CreateMicrovmAuthToken`). The MicroVM id is the tab's session id: the tab sends it with every request, so any execution environment can serve it (it looks the MicroVM up and mints its own token). Closing or reloading the tab terminates its MicroVM (`TerminateMicrovm`).
   - It refuses to start more than `MAX_MICROVMS` (10) live MicroVMs; the start screen then asks to try later.
@@ -38,7 +38,7 @@ Locally there's nothing to provision: the web UI talks straight to the container
 make deploy   # npm ci + terraform init/apply
 ```
 
-See the `webui_url` output, open it and press **Let's play DOOM**.
+See the `webui_url` output, open it and press **Let's play**.
 
 To run the web UI locally but provision the MicroVM on AWS (with your local AWS credentials):
 
@@ -56,7 +56,7 @@ make destroy
 
 ## Limits worth knowing
 
-- A MicroVM lives at most 5 minutes (intentional limit for this experiment, you can set it up to 8 hours). It suspends after 2 minutes without incoming requests and terminates 2 minutes after that (`webui/server.js`). After that, the start screen comes back: press **Let's play DOOM** for a new game.
+- A MicroVM lives at most 5 minutes (intentional limit for this experiment, you can set it up to 8 hours). It suspends after 2 minutes without incoming requests and terminates 2 minutes after that (`webui/server.js`). After that, the start screen comes back: press **Let's play** for a new game.
 - The MicroVM has 2 GB, which comes with 1 vCPU and 32 Mbps of endpoint bandwidth, in and out ([MicroVM networking](https://docs.aws.amazon.com/lambda/latest/dg/microvms-networking.html)). The browser sees about 35–52 fps and 7–12 Mbit/s of SSE while moving (base64, so up to about 9 Mbit/s of WebP on the WebSocket). Frames only go to the WebSocket of a webui execution environment that has a browser stream open. 512 MB and 1 GB are noticeably slower, and so is the image build at those sizes.
 - Logs: the webui writes to `/aws/lambda/web/lambda-microvm-doom-webui`, the MicroVM (build and runtime) to `/aws/lambda-microvms/lambda-microvm-doom`.
 

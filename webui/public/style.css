@@ -13,19 +13,18 @@ body {
   font: 14px/1.4 system-ui, sans-serif;
 }
 
-/* Doom-logo look without a web font: condensed heavy type, orange-to-blood-red fill, dark outline. */
 .caption {
-  margin: 8px 16px 0;
+  margin: 10px 16px 0;
   text-align: center;
-  font: 400 34px/1.1 Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  background: linear-gradient(#ffd34d, #ff8a00 35%, #d62a00 70%, #7a0a00);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-text-stroke: 1px #2a0400;
-  filter: drop-shadow(2px 3px 0 #000);
+  font: 700 26px/1.2 system-ui, sans-serif;
+  color: #eee;
+}
+
+.subcaption {
+  margin: 2px 16px 0;
+  text-align: center;
+  font-size: 14px;
+  color: #aaa;
 }
 
 /* Two panels: game screen on the left, architecture diagram on the right, same height. The status line and
@@ -90,7 +89,7 @@ body {
   display: none;
 }
 
-/* Start screen: shown until "Let's play DOOM" is pressed and the MicroVM runs, and again once it has ended.
+/* Start screen: shown until "Let's play" is pressed and the MicroVM runs, and again once it has ended.
    Sits above the click-to-play overlay. */
 #start {
   position: absolute;
@@ -123,7 +122,7 @@ body {
   gap: 16px;
 }
 
-/* Two lines: "Let's play DOOM" and the sound choice underneath. */
+/* Two lines: "Let's play" and the sound choice underneath. */
 .start-choice {
   display: flex;
   flex-direction: column;
@@ -228,6 +227,21 @@ body {
 
 .help {
   color: #ddd;
+}
+
+/* Trademark / credits line at the bottom of the page. */
+.notice {
+  max-width: 1440px;
+  margin: 0 auto 20px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  text-align: center;
+  font-size: 12px;
+  color: #888;
+}
+
+.notice a {
+  color: #aaa;
 }
 
 /* ---- Architecture panel ---- */

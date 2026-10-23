@@ -4,7 +4,7 @@
 // keys go out as short POST /api/input. The webui relays both over its WebSocket to the MicroVM.
 // Sound effects arrive as events on the same stream and are played locally from samples fetched once;
 // music events name a track, which is fetched as an MP3 (pre-rendered at image build time) and looped.
-// Every tab plays its own game in its own MicroVM. "Let's play DOOM" provisions it; its id is the tab's session id,
+// Every tab plays its own game in its own MicroVM. "Let's play" provisions it; its id is the tab's session id,
 // sent with every request. Closing or reloading the tab terminates it, and the start screen comes back once it
 // has ended. (Locally there's one container, shared by all tabs.)
 
@@ -48,7 +48,7 @@ function api(path, { body, kind } = {}) {
 
 let vm = { state: "NONE" }; // latest /api/status for this tab's MicroVM
 let vmStatusTimer = null;
-let started = false; // "Let's play DOOM" pressed: audio, stream and input are on from then
+let started = false; // "Let's play" pressed: audio, stream and input are on from then
 let provisionError = "";
 
 // The MicroVM can be streamed from while it's running, or suspended (the webui resumes it on connect).
@@ -74,7 +74,7 @@ function renderStatus(status) {
   vm = status;
   const ended = ["NONE", "TERMINATED", "TERMINATING"].includes(vm.state);
   if (ended) {
-    microvmId = null; // the next "Let's play DOOM" provisions a new one
+    microvmId = null; // the next "Let's play" provisions a new one
     stopAudio(); // nothing tells the music to stop when the MicroVM goes away
   }
   startEl.hidden = started && vmUsable();
@@ -460,7 +460,7 @@ function sendKey(code, down) {
   flushInput();
 }
 
-// Before "Let's play DOOM", clicks and keys don't reach the game (and don't create audio the start choice hasn't
+// Before "Let's play", clicks and keys don't reach the game (and don't create audio the start choice hasn't
 // configured yet).
 screen.addEventListener("pointerdown", () => started && initAudio());
 
@@ -506,7 +506,7 @@ setInterval(() => {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// "Let's play DOOM": provisions the tab's MicroVM (unless it has one already) and starts the stream.
+// "Let's play": provisions the tab's MicroVM (unless it has one already) and starts the stream.
 // The click is also the user gesture that browsers require before playing audio.
 let streamLoop = null;
 
