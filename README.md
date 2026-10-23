@@ -1,6 +1,6 @@
 # Can it run Doom? AWS Lambda MicroVMs
 
-This is an experiment of running Doom on [AWS Lambda MicroVMs](https://docs.aws.amazon.com/lambda/latest/dg/microvms-launching.html), played in a web browser.
+This is an experiment of running Freedoom on [AWS Lambda MicroVMs](https://docs.aws.amazon.com/lambda/latest/dg/microvms-launching.html), played in a web browser.
 
 <img src="docs/architecture.png">
 
