@@ -1,0 +1,15 @@
+{
+  "name": "webui",
+  "private": true,
+  "description": "Doom web UI: provisions the Doom MicroVM and bridges the browser (POST + SSE) to it over a WebSocket",
+  "type": "module",
+  "main": "server.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-lambda-microvms": "^3.1156.0",
+    "ws": "^8.22.0"
+  }
+}

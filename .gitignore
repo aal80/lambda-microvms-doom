@@ -1,0 +1,22 @@
+node_modules/
+tmp/
+.DS_Store
+
+# Terraform: local state (contains account IDs and ARNs), provider downloads, plans, build outputs.
+# .terraform.lock.hcl is intentionally committed.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+*.tfvars
+terraform/.build/
+
+# Local doom engine build outputs
+doom/engine/build/
+doom/engine/doomgeneric_headless
+
+# Working notes and personal settings for coding agents (local only)
+memory.md
+.claude/settings.local.json

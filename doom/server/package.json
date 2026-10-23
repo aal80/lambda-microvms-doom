@@ -1,0 +1,10 @@
+{
+  "name": "doom-microvm-server",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "dependencies": {
+    "sharp": "^0.35.5",
+    "ws": "^8.22.0"
+  }
+}

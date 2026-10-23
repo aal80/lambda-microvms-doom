@@ -1,0 +1,308 @@
+:root {
+  --input: #ffb300;
+  --fetch: #ba68c8;
+  --frame: #66bb6a;
+  --audio: #29b6f6;
+  --idle: #4a4a4a;
+}
+
+body {
+  margin: 0;
+  background: #111;
+  color: #ccc;
+  font: 14px/1.4 system-ui, sans-serif;
+}
+
+/* Doom-logo look without a web font: condensed heavy type, orange-to-blood-red fill, dark outline. */
+.caption {
+  margin: 8px 16px 0;
+  text-align: center;
+  font: 400 34px/1.1 Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: linear-gradient(#ffd34d, #ff8a00 35%, #d62a00 70%, #7a0a00);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 1px #2a0400;
+  filter: drop-shadow(2px 3px 0 #000);
+}
+
+/* Two panels: game screen on the left, architecture diagram on the right, same height. The status line and
+   help sit in their own rows under the screen, so the diagram panel's row is exactly as tall as the canvas. */
+.layout {
+  display: grid;
+  /* ~2.15:1 makes the panel about as wide as the diagram (viewBox 400x590) needs at the canvas height. */
+  grid-template-columns: minmax(0, 2.15fr) minmax(280px, 1fr);
+  grid-template-areas:
+    "screen arch"
+    "status ."
+    "help   .";
+  column-gap: 24px;
+  max-width: 1440px;
+  margin: 10px auto 24px;
+  padding: 0 16px;
+}
+
+.game {
+  display: contents;
+}
+
+#screen { grid-area: screen; }
+#status { grid-area: status; }
+.help { grid-area: help; }
+.arch { grid-area: arch; }
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-areas: "screen" "status" "help" "arch";
+  }
+}
+
+#screen {
+  position: relative;
+  outline: none;
+}
+
+/* Doom's 320x200 was displayed at 4:3, so stretch vertically by 1.2. */
+#canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  image-rendering: pixelated;
+}
+
+#overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+#screen:focus #overlay {
+  display: none;
+}
+
+/* Shown until a MicroVM is running; sits above the click-to-play overlay. */
+#provision {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgb(0 0 0 / 0.75);
+  color: #ddd;
+  font-size: 18px;
+}
+
+#provision[hidden] {
+  display: none;
+}
+
+#provision-btn {
+  padding: 14px 28px;
+  font: 600 22px system-ui, sans-serif;
+  color: #fff;
+  background: #b71c1c;
+  border: 2px solid #ff5252;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+#provision-btn:hover {
+  background: #d32f2f;
+}
+
+#provision-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+#provision-btn[hidden] {
+  display: none;
+}
+
+#provision p {
+  margin: 0;
+}
+
+#provision-help {
+  max-width: 80%;
+  text-align: center;
+  font-size: 15px;
+  color: #eee;
+}
+
+#status {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-family: ui-monospace, monospace;
+}
+
+#status button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 1px solid #444;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.help {
+  color: #ddd;
+}
+
+/* ---- Architecture panel ---- */
+
+/* Flex column so the SVG takes whatever height is left; with flex-basis 0 it doesn't add to the row height,
+   so the row (and this panel) is sized by the canvas. */
+.arch {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  box-sizing: border-box;
+  background: #181818;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 12px 16px 16px;
+}
+
+.arch h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ddd;
+}
+
+/* Fills the remaining panel height; the viewBox keeps the aspect ratio (scaled to fit, centered). */
+#diagram {
+  display: block;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  #diagram {
+    flex: none;
+    height: auto;
+  }
+}
+
+#diagram .box {
+  fill: #222;
+  stroke: #555;
+  stroke-width: 1.5;
+}
+
+#diagram .box.runtime {
+  fill: #1b1f27;
+  stroke: #ff9900; /* AWS orange */
+  stroke-dasharray: 6 4;
+}
+
+#diagram .box.inner {
+  fill: #262b35;
+  stroke: #4a5568;
+}
+
+#diagram text {
+  fill: #ccc;
+  font-size: 15px;
+  text-anchor: start;
+}
+
+#diagram .title {
+  font-size: 19px;
+  font-weight: 600;
+  fill: #eee;
+  text-anchor: middle;
+}
+
+#diagram .title.small {
+  font-size: 16px;
+}
+
+#diagram .sub {
+  fill: #999;
+  font-size: 13.5px;
+}
+
+#diagram .title + .sub,
+#diagram .sub.center {
+  text-anchor: middle;
+}
+
+#diagram .label {
+  font-weight: 600;
+}
+
+#diagram .rate {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  fill: #aaa;
+}
+
+#diagram .end {
+  text-anchor: end;
+}
+
+/* Arrows fade back to idle; while "hot" they snap to the colour of the traffic kind. */
+#diagram .arrow {
+  color: var(--idle);
+  transition: color 0.35s ease-out;
+}
+
+#diagram .arrow line {
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+#diagram .arrow use {
+  fill: currentColor;
+}
+
+#diagram .arrow.hot {
+  transition: none;
+}
+
+#diagram .arrow.hot[data-kind="input"] { color: var(--input); }
+#diagram .arrow.hot[data-kind="fetch"] { color: var(--fetch); }
+#diagram .arrow.hot[data-kind="frame"] { color: var(--frame); }
+#diagram .arrow.hot[data-kind="audio"] { color: var(--audio); }
+
+.legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: #aaa;
+}
+
+.swatch {
+  display: inline-block;
+  width: 18px;
+  height: 4px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-radius: 2px;
+}
+
+.swatch.input { background: var(--input); }
+.swatch.fetch { background: var(--fetch); }
+.swatch.frame { background: var(--frame); }
+.swatch.audio { background: var(--audio); }

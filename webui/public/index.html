@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Doom on Lambda MicroVMs</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <h1 class="caption">Can it run DOOM: Lambda MicroVMs</h1>
+  <main class="layout">
+    <section class="game">
+      <div id="screen" tabindex="0">
+        <canvas id="canvas" width="320" height="200"></canvas>
+        <div id="overlay">Click to play</div>
+        <div id="provision" hidden>
+          <button id="provision-btn" type="button" hidden>Provision DOOM</button>
+          <p id="provision-msg"></p>
+          <!-- Filled from .help by app.js, so the controls are listed once. -->
+          <p id="provision-help"></p>
+        </div>
+      </div>
+      <div id="status">
+        <span id="conn">disconnected</span>
+        <span id="vm"></span>
+        <button id="sound" type="button">sound: click game to enable</button>
+        <span id="stats"></span>
+      </div>
+      <p class="help">
+        WASD move/turn &middot; K fire &middot; L open/use &middot; Shift run &middot; Alt+A/D strafe
+        <br>1-7 weapons &middot; Tab map &middot; Esc menu (arrows + Enter in menus)
+      </p>
+    </section>
+
+    <aside class="arch">
+      <h2>Architecture</h2>
+      <!-- Arrow groups (.arrow) light up via diagram.js: req-* = POST requests, vid-* = SSE frames,
+           aud-* = SSE sound/music events. Suffix = hop: 1 browser-webui, 2 webui-runtime, 3 server-engine. -->
+      <svg id="diagram" viewBox="0 0 400 590" role="img" aria-label="Browser to webui to Lambda MicroVM">
+        <defs>
+          <polygon id="head-down" points="-5,-8 5,-8 0,0" />
+          <polygon id="head-up" points="-5,8 5,8 0,0" />
+        </defs>
+
+        <!-- Browser -->
+        <rect class="box" x="20" y="10" width="360" height="66" rx="8" />
+        <text class="title" x="200" y="37">Browser</text>
+        <text class="sub" x="200" y="57">canvas · Web Audio · keyboard</text>
+
+        <!-- Hop 1: browser <-> webui -->
+        <g class="arrow" id="req-1"><line x1="170" y1="80" x2="170" y2="146" /><use href="#head-down" x="170" y="152" /></g>
+        <g class="arrow" id="vid-1"><line x1="212" y1="152" x2="212" y2="86" /><use href="#head-up" x="212" y="80" /></g>
+        <g class="arrow" id="aud-1"><line x1="244" y1="152" x2="244" y2="86" /><use href="#head-up" x="244" y="80" /></g>
+        <text class="label end" x="160" y="107">POST /api/*</text>
+        <text class="rate end" x="160" y="126" id="rate-req">–</text>
+        <text class="label" x="256" y="101">SSE</text>
+        <text class="rate" x="256" y="120" id="rate-vid">–</text>
+        <text class="rate" x="256" y="138" id="rate-aud">–</text>
+
+        <!-- webui -->
+        <rect class="box" x="20" y="156" width="360" height="66" rx="8" />
+        <!-- Box titles next to a logo are centered in the space right of it (x=225). -->
+        <image class="logo" href="/img/lambda.svg" x="32" y="166" width="46" height="46" />
+        <text class="title" x="225" y="183">Lambda Web Function</text>
+        <text class="sub" x="225" y="203" id="webui-sub">provisioning · token · WebSocket bridge</text>
+
+        <!-- Hop 2: webui <-> runtime -->
+        <g class="arrow" id="req-2"><line x1="170" y1="226" x2="170" y2="292" /><use href="#head-down" x="170" y="298" /></g>
+        <g class="arrow" id="vid-2"><line x1="212" y1="298" x2="212" y2="232" /><use href="#head-up" x="212" y="226" /></g>
+        <g class="arrow" id="aud-2"><line x1="244" y1="298" x2="244" y2="232" /><use href="#head-up" x="244" y="226" /></g>
+        <text class="label end" x="160" y="255" id="hop2-req">WebSocket</text>
+        <text class="sub end" x="160" y="274" id="hop2-auth">X-aws-proxy-auth</text>
+        <text class="label" x="256" y="255">WebSocket</text>
+        <text class="sub" x="256" y="274">binary frames</text>
+
+        <!-- Runtime: server + engine -->
+        <rect class="box runtime" x="20" y="302" width="360" height="280" rx="8" />
+        <image class="logo" href="/img/lambda.svg" x="30" y="310" width="44" height="44" />
+        <text class="title" x="225" y="326" id="runtime-title">Lambda MicroVM</text>
+        <text class="sub" x="225" y="344" id="runtime-sub">Firecracker · 2 GB · snapshot</text>
+
+        <rect class="box inner" x="45" y="356" width="310" height="60" rx="6" />
+        <text class="title small" x="200" y="380">API bridge</text>
+        <text class="sub" x="200" y="399">hooks :8080 · game :8081 (ws)</text>
+
+        <g class="arrow" id="req-3"><line x1="170" y1="420" x2="170" y2="486" /><use href="#head-down" x="170" y="492" /></g>
+        <g class="arrow" id="vid-3"><line x1="212" y1="492" x2="212" y2="426" /><use href="#head-up" x="212" y="420" /></g>
+        <g class="arrow" id="aud-3"><line x1="244" y1="492" x2="244" y2="426" /><use href="#head-up" x="244" y="420" /></g>
+        <text class="label end" x="160" y="451">stdin</text>
+        <text class="sub end" x="160" y="470">key events</text>
+        <text class="label" x="256" y="451">fd 3</text>
+        <text class="sub" x="256" y="470">frames · audio</text>
+
+        <rect class="box inner" x="45" y="496" width="310" height="60" rx="6" />
+        <text class="title small" x="200" y="520">doomgeneric (C)</text>
+        <text class="sub" x="200" y="539">headless engine · Freedoom</text>
+      </svg>
+
+      <ul class="legend">
+        <li><span class="swatch input"></span>key presses</li>
+        <li><span class="swatch fetch"></span>provisioning / downloads</li>
+        <li><span class="swatch frame"></span>video frames</li>
+        <li><span class="swatch audio"></span>sound &amp; music events</li>
+      </ul>
+    </aside>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

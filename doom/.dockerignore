@@ -1,0 +1,4 @@
+engine/build/
+engine/doomgeneric_headless
+server/node_modules/
+.DS_Store
