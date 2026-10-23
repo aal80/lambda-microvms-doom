@@ -77,9 +77,9 @@ resource "aws_iam_role_policy_attachment" "webui_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Start and inspect the Doom MicroVM and mint its endpoint auth tokens. The MicroVM actions use the lambda:
-# prefix. Per-MicroVM calls authorize against the image the MicroVM runs (CloudTrail logs GetMicrovm with the
-# image ARN as its resource), so they're scoped to this image. PassRole hands the run role to RunMicrovm.
+# Start, inspect and terminate the Doom MicroVMs and mint their endpoint auth tokens. The MicroVM actions use the
+# lambda: prefix. Per-MicroVM calls authorize against the image the MicroVM runs (CloudTrail logs GetMicrovm with
+# the image ARN as its resource), so they're scoped to this image. PassRole hands the run role to RunMicrovm.
 resource "aws_iam_role_policy" "webui_microvms" {
   name = "run-doom-microvm"
   role = aws_iam_role.webui.id
@@ -94,6 +94,7 @@ resource "aws_iam_role_policy" "webui_microvms" {
           "lambda:RunMicrovm",
           "lambda:GetMicrovm",
           "lambda:ResumeMicrovm",
+          "lambda:TerminateMicrovm",
           "lambda:CreateMicrovmAuthToken",
         ]
         Resource = aws_cloudformation_stack.microvm_image.outputs["ImageArn"]
@@ -156,6 +157,8 @@ resource "awscc_lambda_web_function_revision" "webui" {
       AWS_LAMBDA_NODEJS_ENTRYPOINT = "server.js"
       MICROVM_IMAGE_ARN            = aws_cloudformation_stack.microvm_image.outputs["ImageArn"]
       MICROVM_RUN_ROLE_ARN         = aws_iam_role.microvm_run.arn
+      # Every browser tab starts its own MicroVM; provisioning is refused once this many are live.
+      MAX_MICROVMS = "10"
     }
   }
 
@@ -171,7 +174,7 @@ resource "awscc_lambda_web_function_revision" "webui" {
 }
 
 # Public endpoint (ApplicationManaged = no AWS-layer auth), and the webui has no login of its own: anyone with
-# the URL can provision the MicroVM and play. Throttled and capped to limit abuse and cost.
+# the URL can provision MicroVMs (up to MAX_MICROVMS) and play. Throttled and capped to limit abuse and cost.
 resource "awscc_lambda_web_function_endpoint" "webui" {
   function_name = awscc_lambda_web_function.webui.function_name
   endpoint_name = "default"

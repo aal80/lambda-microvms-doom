@@ -13,17 +13,24 @@
       <div id="screen" tabindex="0">
         <canvas id="canvas" width="320" height="200"></canvas>
         <div id="overlay">Click to play</div>
-        <div id="provision" hidden>
-          <button id="provision-btn" type="button" hidden>Provision DOOM</button>
-          <p id="provision-msg"></p>
+        <div id="start">
+          <div class="start-buttons" id="start-buttons">
+            <button id="start-btn" class="start-choice" type="button">
+              <span class="line1">Let's play DOOM</span><span class="line2">(with full sound!)</span>
+            </button>
+            <button id="start-muted-btn" class="start-choice quiet" type="button">
+              <span class="line1">Let's play DOOM</span><span class="line2">(with sounds off)</span>
+            </button>
+          </div>
+          <p id="start-msg"></p>
           <!-- Filled from .help by app.js, so the controls are listed once. -->
-          <p id="provision-help"></p>
+          <p id="start-help"></p>
         </div>
+        <button id="sound" type="button" title="Sound on: click to mute" aria-label="Sound on: click to mute">🔊</button>
       </div>
       <div id="status">
         <span id="conn">disconnected</span>
         <span id="vm"></span>
-        <button id="sound" type="button">sound: click game to enable</button>
         <span id="stats"></span>
       </div>
       <p class="help">

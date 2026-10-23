@@ -1,10 +1,12 @@
-// Browser client: provisions the Doom MicroVM, renders the frame stream and sends key events.
+// Browser client: provisions this tab's Doom MicroVM, renders the frame stream and sends key events.
 //
 // The browser talks only to the webui: frames arrive as SSE on a long-lived POST /api/stream (read with fetch),
 // keys go out as short POST /api/input. The webui relays both over its WebSocket to the MicroVM.
 // Sound effects arrive as events on the same stream and are played locally from samples fetched once;
 // music events name a track, which is fetched as an MP3 (pre-rendered at image build time) and looped.
-// There's a single game: one MicroVM, shared by all tabs. It must be provisioned first (Provision DOOM).
+// Every tab plays its own game in its own MicroVM. "Let's play DOOM" provisions it; its id is the tab's session id,
+// sent with every request. Closing or reloading the tab terminates it, and the start screen comes back once it
+// has ended. (Locally there's one container, shared by all tabs.)
 
 import { loadConfig, pulse, setRates } from "/diagram.js";
 
@@ -17,72 +19,99 @@ const connEl = document.getElementById("conn");
 const statsEl = document.getElementById("stats");
 const soundBtn = document.getElementById("sound");
 const vmEl = document.getElementById("vm");
-const provisionEl = document.getElementById("provision");
-const provisionBtn = document.getElementById("provision-btn");
-const provisionMsg = document.getElementById("provision-msg");
-// The controls, also shown under the Provision button so they're visible before the game starts.
-document.getElementById("provision-help").innerHTML = document.querySelector(".help").innerHTML;
+const startEl = document.getElementById("start");
+const startButtons = document.getElementById("start-buttons");
+const startMsg = document.getElementById("start-msg");
+// The controls, also shown on the start screen so they're visible before the game starts.
+document.getElementById("start-help").innerHTML = document.querySelector(".help").innerHTML;
 const image = ctx.createImageData(WIDTH, HEIGHT);
 const pixels = new Uint32Array(image.data.buffer);
 const palette = new Uint32Array(256);
 
-// Calls the webui API. kind: "input" or "fetch" lights the matching arrows in the diagram; streams don't count.
+// This tab's MicroVM id (its session id), from /api/provision; null until then and once it has ended.
+let microvmId = null;
+
+// Calls the webui API with the tab's session id. kind: "input" or "fetch" lights the matching arrows in the
+// diagram; streams don't count.
 function api(path, { body, kind } = {}) {
   if (kind) {
     stats.requests++;
     pulse(kind);
   }
-  return fetch(path, body === undefined ? {} : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const headers = microvmId ? { "x-doom-session": microvmId } : {};
+  if (body === undefined) return fetch(path, { headers });
+  headers["content-type"] = "application/json";
+  return fetch(path, { method: "POST", headers, body: JSON.stringify(body) });
 }
 
 // ---- MicroVM provisioning + status ----
 
-let vm = { state: "UNKNOWN" }; // latest /api/status
+let vm = { state: "NONE" }; // latest /api/status for this tab's MicroVM
 let vmStatusTimer = null;
+let started = false; // "Let's play DOOM" pressed: audio, stream and input are on from then
+let provisionError = "";
 
 // The MicroVM can be streamed from while it's running, or suspended (the webui resumes it on connect).
 const vmUsable = () => ["RUNNING", "SUSPENDED", "SUSPENDING"].includes(vm.state);
 
+// Polls the tab's MicroVM while it has one.
 async function refreshStatus() {
+  clearTimeout(vmStatusTimer);
+  if (!microvmId) return;
   try {
-    renderStatus(await (await api("/api/status")).json());
+    const res = await api("/api/status");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    renderStatus(await res.json());
   } catch (err) {
     console.warn("status failed:", err);
   }
-  clearTimeout(vmStatusTimer);
-  vmStatusTimer = setTimeout(refreshStatus, vm.state === "PENDING" ? 1000 : 3000);
+  if (microvmId) vmStatusTimer = setTimeout(refreshStatus, vm.state === "PENDING" ? 1000 : 3000);
 }
 
+// The start screen stays up until the player has started and the MicroVM runs. After that it only comes back
+// (with the buttons) once the MicroVM has ended; while one is starting it just says so.
 function renderStatus(status) {
   vm = status;
-  const none = !vmUsable() && vm.state !== "PENDING";
-  provisionEl.hidden = vmUsable();
-  provisionBtn.hidden = !none;
-  provisionMsg.textContent =
-    vm.state === "PENDING" ? "Starting the MicroVM…" : vm.state === "UNKNOWN" ? "" : "No MicroVM running.";
+  const ended = ["NONE", "TERMINATED", "TERMINATING"].includes(vm.state);
+  if (ended) {
+    microvmId = null; // the next "Let's play DOOM" provisions a new one
+    stopAudio(); // nothing tells the music to stop when the MicroVM goes away
+  }
+  startEl.hidden = started && vmUsable();
+  startButtons.hidden = started && !ended;
+  startMsg.textContent =
+    provisionError ||
+    (vm.state === "PENDING" ? "Starting the MicroVM…" : started && ended ? "The MicroVM has ended." : "");
   renderCountdown();
 }
 
 function renderCountdown() {
   if (vm.mode === "local") return (vmEl.textContent = "local container");
+  if (vm.state === "NONE") return (vmEl.textContent = "no MicroVM");
   const left = vm.expiresAt ? Math.max(0, Math.round((new Date(vm.expiresAt) - Date.now()) / 1000)) : null;
   const time = left === null ? "" : ` · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")} left`;
   vmEl.textContent = `MicroVM ${vm.state.toLowerCase()}${vmUsable() ? time : ""}`;
 }
 setInterval(renderCountdown, 1000);
 
-provisionBtn.addEventListener("click", async () => {
-  provisionBtn.disabled = true;
+async function provision() {
+  provisionError = "";
+  for (const btn of startButtons.querySelectorAll("button")) btn.disabled = true;
   try {
     const res = await api("/api/provision", { body: {}, kind: "fetch" });
-    renderStatus(await res.json());
+    if (res.status === 503) throw new Error("Too many games are running right now. Please try later.");
+    if (!res.ok) throw new Error(`Provisioning failed: HTTP ${res.status}`);
+    const status = await res.json();
+    microvmId = status.microvmId;
+    renderStatus(status);
   } catch (err) {
-    provisionMsg.textContent = `Provisioning failed: ${err.message}`;
+    provisionError = err.message;
+    renderStatus(vm); // there's no MicroVM to poll, so show the message now
   } finally {
-    provisionBtn.disabled = false;
+    for (const btn of startButtons.querySelectorAll("button")) btn.disabled = false;
     refreshStatus();
   }
-});
+}
 
 // ---- Frame stream ----
 
@@ -102,8 +131,11 @@ async function runStream() {
       connEl.textContent = "connecting…";
       const res = await api("/api/stream", { body: {} });
       if (res.status === 409) {
-        refreshStatus(); // the MicroVM is gone: show Provision DOOM again
+        // The MicroVM is gone: wait for the status (which shows the start screen again) before looping, so this
+        // doesn't fire stream requests until it arrives.
         await res.text();
+        await refreshStatus();
+        await sleep(500);
         continue;
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
@@ -242,13 +274,14 @@ function initAudio() {
   if (audio) return audio.resume();
   audio = new AudioContext();
   master = audio.createGain();
+  master.gain.value = muted ? 0 : 1; // the player may have muted before starting
   master.connect(audio.destination);
   musicGain = audio.createGain();
   audio.createMediaElementSource(musicEl).connect(musicGain).connect(master);
   applyMusic();
   loadSounds().catch((err) => {
     console.warn("loading sounds failed:", err);
-    soundBtn.textContent = "sound: failed";
+    setSoundButton("⚠️", "Sound failed to load");
   });
 }
 
@@ -275,7 +308,7 @@ async function fetchSounds() {
 }
 
 async function loadSounds() {
-  soundBtn.textContent = "sound: loading…";
+  setSoundButton(muted ? "🔇" : "🔊", "Sound: loading…", { loading: true });
   const { sounds } = await fetchSounds();
   for (const [name, { rate, pcm }] of Object.entries(sounds)) {
     const bytes = base64ToBytes(pcm);
@@ -284,7 +317,7 @@ async function loadSounds() {
     for (let i = 0; i < bytes.length; i++) samples[i] = (bytes[i] - 128) / 128; // unsigned 8-bit PCM
     buffers.set(name, buf);
   }
-  updateSoundButton();
+  applyMute();
 }
 
 // vol 0..127; sep 0 (left) .. 128 (center) .. 254 (right)
@@ -334,6 +367,13 @@ function onMusic(ev) {
   applyMusic();
 }
 
+// The game has ended: stop the (looping) music track and any sound effects still playing.
+function stopAudio() {
+  music = { ...music, op: "stop", lump: null };
+  applyMusic();
+  for (const ch of [...playing.keys()]) stopChannel(ch);
+}
+
 async function applyMusic() {
   if (!musicGain) return; // audio not enabled yet; applied once it is
   musicGain.gain.value = music.vol / 127;
@@ -365,17 +405,29 @@ async function musicUrl(lump) {
 
 let muted = false;
 
-function updateSoundButton() {
-  master.gain.value = muted ? 0 : 1;
-  soundBtn.textContent = muted ? "sound: off" : "sound: on";
+// Applies the mute choice to the audio (once there is any) and to the button. Before the game starts it's just
+// remembered: initAudio applies it.
+function applyMute() {
+  if (master) master.gain.value = muted ? 0 : 1;
+  if (muted) setSoundButton("🔇", "Sound off: click to turn on");
+  else setSoundButton("🔊", "Sound on: click to mute");
+}
+
+function setSoundButton(icon, label, { loading = false } = {}) {
+  soundBtn.textContent = icon;
+  soundBtn.title = label;
+  soundBtn.setAttribute("aria-label", label);
+  soundBtn.classList.toggle("loading", loading);
 }
 
 // Keep keyboard focus on the game when toggling sound.
 soundBtn.addEventListener("mousedown", (e) => e.preventDefault());
+// The button sits on the game screen, whose pointerdown enables audio; without this, the first click would
+// enable audio there and then immediately mute it here.
+soundBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
 soundBtn.addEventListener("click", () => {
-  if (!audio) return initAudio();
   muted = !muted;
-  updateSoundButton();
+  applyMute();
 });
 
 // ---- Input ----
@@ -408,10 +460,12 @@ function sendKey(code, down) {
   flushInput();
 }
 
-screen.addEventListener("pointerdown", initAudio);
+// Before "Let's play DOOM", clicks and keys don't reach the game (and don't create audio the start choice hasn't
+// configured yet).
+screen.addEventListener("pointerdown", () => started && initAudio());
 
 screen.addEventListener("keydown", (e) => {
-  if (e.metaKey) return; // leave browser shortcuts alone
+  if (e.metaKey || !started) return; // leave browser shortcuts alone; nothing to play yet
   initAudio();
   e.preventDefault();
   if (e.repeat || held.has(e.code)) return;
@@ -452,7 +506,28 @@ setInterval(() => {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-screen.focus();
+// "Let's play DOOM": provisions the tab's MicroVM (unless it has one already) and starts the stream.
+// The click is also the user gesture that browsers require before playing audio.
+let streamLoop = null;
+
+function start({ withSound }) {
+  muted = !withSound;
+  started = true;
+  applyMute();
+  initAudio();
+  screen.focus();
+  streamLoop ??= runStream();
+  if (microvmId) renderStatus(vm);
+  else provision();
+}
+document.getElementById("start-btn").addEventListener("click", () => start({ withSound: true }));
+document.getElementById("start-muted-btn").addEventListener("click", () => start({ withSound: false }));
+
+// Closing or reloading the tab ends its game, so its MicroVM doesn't keep running (and counting toward the cap).
+// sendBeacon survives the page going away, but can't set headers: the id goes in the query.
+addEventListener("pagehide", () => {
+  if (microvmId) navigator.sendBeacon(`/api/terminate?microvm=${encodeURIComponent(microvmId)}`);
+});
+
 loadConfig();
-refreshStatus();
-runStream();
+renderStatus(vm);

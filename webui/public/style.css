@@ -90,8 +90,9 @@ body {
   display: none;
 }
 
-/* Shown until a MicroVM is running; sits above the click-to-play overlay. */
-#provision {
+/* Start screen: shown until "Let's play DOOM" is pressed and the MicroVM runs, and again once it has ended.
+   Sits above the click-to-play overlay. */
+#start {
   position: absolute;
   inset: 0;
   display: flex;
@@ -104,13 +105,31 @@ body {
   font-size: 18px;
 }
 
-#provision[hidden] {
+#start[hidden],
+.start-buttons[hidden] {
   display: none;
 }
 
-#provision-btn {
-  padding: 14px 28px;
-  font: 600 22px system-ui, sans-serif;
+/* The click-to-play overlay would show through the start screen. */
+#screen:has(#start:not([hidden])) #overlay {
+  display: none;
+}
+
+/* Stacked: the full-sound start on top, the muted one below. */
+.start-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Two lines: "Let's play DOOM" and the sound choice underneath. */
+.start-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 26px;
   color: #fff;
   background: #b71c1c;
   border: 2px solid #ff5252;
@@ -118,24 +137,56 @@ body {
   cursor: pointer;
 }
 
-#provision-btn:hover {
+.start-choice:hover {
   background: #d32f2f;
 }
 
-#provision-btn:disabled {
+.start-choice:disabled {
   opacity: 0.6;
   cursor: progress;
 }
 
-#provision-btn[hidden] {
-  display: none;
+.start-choice .line1 {
+  font: 600 22px system-ui, sans-serif;
 }
 
-#provision p {
+.start-choice .line2 {
+  font: 400 15px system-ui, sans-serif;
+}
+
+/* The full-sound start is the main choice: 50% larger. */
+#start-btn {
+  padding: 18px 39px;
+  border-radius: 12px;
+}
+
+#start-btn .line1 {
+  font-size: 33px;
+}
+
+#start-btn .line2 {
+  font-size: 22px;
+}
+
+/* Same shape, transparent: the muted start. */
+.start-choice.quiet {
+  background: transparent;
+  border-color: rgb(255 255 255 / 0.6);
+}
+
+.start-choice.quiet:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+
+#start p {
   margin: 0;
 }
 
-#provision-help {
+#start-msg:empty {
+  display: none;
+}
+
+#start-help {
   max-width: 80%;
   text-align: center;
   font-size: 15px;
@@ -149,13 +200,30 @@ body {
   font-family: ui-monospace, monospace;
 }
 
-#status button {
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: 1px solid #444;
-  border-radius: 4px;
+/* Sound on/off, top right of the game screen, above the overlays. */
+#sound {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 20px;
+  line-height: 40px;
+  text-align: center;
+  background: rgb(0 0 0 / 0.55);
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: 50%;
   cursor: pointer;
+}
+
+#sound:hover {
+  background: rgb(0 0 0 / 0.8);
+}
+
+#sound.loading {
+  opacity: 0.5;
 }
 
 .help {
